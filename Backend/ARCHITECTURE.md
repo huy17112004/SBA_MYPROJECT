@@ -81,7 +81,7 @@ src/main/java/org/example/quannuoc/
 
 ### API Endpoints
 
-`GET /api/v1/menu-items` · `GET /{id}` · `POST /` · `PUT /{id}` · `DELETE /{id}`
+`GET /api/menu-items` · `GET /{id}` · `POST /` · `PUT /{id}` · `DELETE /{id}`
 
 > URL: **kebab-case**, danh từ số nhiều, không dùng động từ.
 
@@ -155,16 +155,7 @@ Mỗi entity cần 3 file: `{Entity}Request.java`, `{Entity}Response.java`, `{En
 
 ---
 
-## 9. API Versioning
-
-- Format: **`/api/v1/{resource}`**
-- Controller: `@RequestMapping("/api/v1/menu-items")`
-- Breaking change → tạo `/api/v2/`, giữ v1 song song
-- Project nhỏ: chỉ cần `v1`
-
----
-
-## 10. Clean Code
+## 9. Clean Code
 
 | # | Quy tắc |
 |---|---|

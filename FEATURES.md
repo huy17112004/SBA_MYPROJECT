@@ -32,13 +32,13 @@ Tài liệu này liệt kê **tất cả chức năng** cần phát triển, đ�
 
 ### 1.2 Quản lý Menu (Món ăn & Đồ uống)
 
-- [ ] 🔴 **API CRUD món ăn** — Thêm / Sửa / Xóa / Liệt kê món
-- [ ] 🔴 **Trang quản lý menu** — Giao diện thêm/sửa/xóa món
-- [ ] 🔴 **Phân loại món** — Chia theo danh mục: Đồ uống, Đồ ăn nhanh, Khác
-- [ ] 🔴 **API CRUD loại món** — Thêm / Sửa / Xóa / Liệt kê loại món
-- [ ] 🔴 **Giá tiền** — Mỗi món có giá, hiển thị định dạng VNĐ
-- [ ] 🟡 **Trạng thái còn hàng / hết hàng** — Đánh dấu món nào đang hết
-- [ ] 🟡 **Lọc món ăn** — Tìm kiếm món theo tên, Lọc món theo loại, Lọc theo trạng thái (còn hàng / hết hàng)
+- [x] 🔴 **API CRUD món ăn** — Thêm / Sửa / Xóa / Liệt kê món
+- [x] 🔴 **Trang quản lý menu** — Giao diện thêm/sửa/xóa món
+- [x] 🔴 **Phân loại món** — Chia theo danh mục: Đồ uống, Đồ ăn nhanh, Khác
+- [x] 🔴 **API CRUD loại món** — Thêm / Sửa / Xóa / Liệt kê loại món
+- [x] 🔴 **Giá tiền** — Mỗi món có giá, hiển thị định dạng VNĐ
+- [x] 🟡 **Trạng thái còn hàng / hết hàng** — Đánh dấu món nào đang hết
+- [x] 🟡 **Lọc món ăn** — Tìm kiếm món theo tên, Lọc món theo loại, Lọc theo trạng thái (còn hàng / hết hàng)
 
 ### 1.3 Quản lý Bàn
 

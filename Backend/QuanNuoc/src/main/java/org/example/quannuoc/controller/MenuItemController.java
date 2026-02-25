@@ -15,7 +15,7 @@ import java.util.List;
 import org.example.quannuoc.util.SearchUtils;
 
 @RestController
-@RequestMapping("/api/v1/menu-items")
+@RequestMapping("/api/menu-items")
 @RequiredArgsConstructor
 public class MenuItemController {
 
@@ -27,7 +27,8 @@ public class MenuItemController {
             @RequestParam(name = "available", required = false) Boolean available,
             @RequestParam(name = "keyword", required = false) String keyword) {
         return ResponseEntity.ok(
-                ApiResponse.success(menuItemService.getAll(categoryId, available, SearchUtils.getNormalizedKeyword(keyword))));
+                ApiResponse.success(
+                        menuItemService.getAll(categoryId, available, SearchUtils.getNormalizedKeyword(keyword))));
     }
 
     @GetMapping("/{id}")

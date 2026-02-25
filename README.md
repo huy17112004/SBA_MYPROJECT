@@ -31,7 +31,7 @@ Một ứng dụng web đơn giản chạy trên **điện thoại / máy tính 
 ┌─────────────────────────────────────────────────┐
 │                   CLIENT                        │
 │         React 19 + Vite 7 (SPA)                 │
-│     Chạy trên trình duyệt điện thoại/PC        │
+│     Chạy trên trình duyệt điện thoại/PC         │
 └────────────────────┬────────────────────────────┘
                      │ REST API (JSON)
                      ▼

@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 98%;
+    --foreground: 20 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 25% 15%;
+
+    --primary: 32 95% 44%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 32 30% 93%;
+    --secondary-foreground: 20 25% 25%;
+
+    --muted: 32 15% 93%;
+    --muted-foreground: 20 10% 45%;
+
+    --accent: 158 64% 36%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 32 20% 88%;
+    --input: 32 20% 88%;
+    --ring: 32 95% 44%;
+
+    --radius: 0.75rem;
+
+    /* Status colors */
+    --status-available: 142 71% 45%;
+    --status-occupied: 0 84% 60%;
+    --status-waiting: 38 92% 50%;
+
+    /* Sidebar */
+    --sidebar-background: 20 25% 12%;
+    --sidebar-foreground: 40 20% 85%;
+    --sidebar-primary: 32 95% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 20 20% 18%;
+    --sidebar-accent-foreground: 40 20% 90%;
+    --sidebar-border: 20 15% 20%;
+    --sidebar-ring: 32 95% 50%;
+
+    /* Gradients */
+    --gradient-warm: linear-gradient(135deg, hsl(32, 95%, 44%), hsl(25, 95%, 53%));
+    --gradient-hero: linear-gradient(135deg, hsl(20, 25%, 12%), hsl(20, 20%, 18%));
+    --gradient-success: linear-gradient(135deg, hsl(142, 71%, 45%), hsl(158, 64%, 36%));
+    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(40, 33%, 97%));
+
+    /* Shadows */
+    --shadow-soft: 0 2px 15px -3px hsl(32 95% 44% / 0.1), 0 4px 6px -4px hsl(32 95% 44% / 0.05);
+    --shadow-card: 0 1px 3px hsl(20 25% 15% / 0.06), 0 1px 2px hsl(20 25% 15% / 0.04);
+    --shadow-elevated: 0 10px 25px -5px hsl(20 25% 15% / 0.1), 0 8px 10px -6px hsl(20 25% 15% / 0.05);
+  }
+
+  .dark {
+    --background: 20 25% 8%;
+    --foreground: 40 20% 90%;
+
+    --card: 20 20% 12%;
+    --card-foreground: 40 20% 90%;
+
+    --popover: 20 20% 12%;
+    --popover-foreground: 40 20% 90%;
+
+    --primary: 32 95% 50%;
+    --primary-foreground: 20 25% 10%;
+
+    --secondary: 20 15% 18%;
+    --secondary-foreground: 40 20% 85%;
+
+    --muted: 20 10% 18%;
+    --muted-foreground: 20 10% 55%;
+
+    --accent: 158 50% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 20 15% 20%;
+    --input: 20 15% 20%;
+    --ring: 32 95% 50%;
+
+    --sidebar-background: 20 25% 6%;
+    --sidebar-foreground: 40 20% 85%;
+    --sidebar-primary: 32 95% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 20 20% 12%;
+    --sidebar-accent-foreground: 40 20% 90%;
+    --sidebar-border: 20 15% 14%;
+    --sidebar-ring: 32 95% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Be Vietnam Pro', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
+  .gradient-warm {
+    background: var(--gradient-warm);
+  }
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  .gradient-success {
+    background: var(--gradient-success);
+  }
+
+  /* Scrollbar */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+  }
+}

@@ -14,14 +14,13 @@ export interface MenuItem {
   available: boolean;
 }
 
-export type TableStatus = 'available' | 'occupied' | 'waiting';
+export type TableStatus = 'AVAILABLE' | 'OCCUPIED';
 
 export interface DiningTable {
-  id: string;
+  id: number;
   name: string;
   seats: number;
   status: TableStatus;
-  note?: string;
 }
 
 export type OrderStatus = 'active' | 'completed' | 'cancelled';

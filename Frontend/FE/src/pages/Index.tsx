@@ -9,16 +9,15 @@ import { DollarSign, ShoppingBag, Armchair, Clock } from 'lucide-react';
 import type { TableStatus } from '@/types';
 
 const statusConfig: Record<TableStatus, { label: string; color: string; bgClass: string }> = {
-  available: { label: 'Trống', color: 'text-status-available', bgClass: 'bg-status-available/10 border-status-available/30' },
-  occupied: { label: 'Có khách', color: 'text-status-occupied', bgClass: 'bg-status-occupied/10 border-status-occupied/30' },
-  waiting: { label: 'Chờ TT', color: 'text-status-waiting', bgClass: 'bg-status-waiting/10 border-status-waiting/30' },
+  AVAILABLE: { label: 'Trống', color: 'text-status-available', bgClass: 'bg-status-available/10 border-status-available/30' },
+  OCCUPIED: { label: 'Có khách', color: 'text-status-occupied', bgClass: 'bg-status-occupied/10 border-status-occupied/30' },
 };
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { tables, getTodayRevenue, getTodayOrderCount, getActiveOrders } = useApp();
   const activeOrders = getActiveOrders();
-  const occupiedTables = tables.filter(t => t.status !== 'available').length;
+  const occupiedTables = tables.filter(t => t.status !== 'AVAILABLE').length;
 
   const stats = [
     { label: 'Doanh thu hôm nay', value: formatVND(getTodayRevenue()), icon: DollarSign, accent: 'gradient-warm' },
@@ -63,7 +62,7 @@ export default function Dashboard() {
           <div className="flex gap-3 text-xs">
             {Object.entries(statusConfig).map(([key, cfg]) => (
               <span key={key} className={cn('flex items-center gap-1.5', cfg.color)}>
-                <span className={cn('w-2.5 h-2.5 rounded-full', key === 'available' ? 'bg-status-available' : key === 'occupied' ? 'bg-status-occupied' : 'bg-status-waiting')} />
+                <span className={cn('w-2.5 h-2.5 rounded-full', key === 'AVAILABLE' ? 'bg-status-available' : 'bg-status-occupied')} />
                 {cfg.label}
               </span>
             ))}
@@ -84,13 +83,13 @@ export default function Dashboard() {
                   className={cn(
                     'cursor-pointer transition-all duration-200 hover:shadow-elevated hover:scale-[1.02] border-2',
                     cfg.bgClass,
-                    table.status === 'occupied' && 'animate-pulse-soft'
+                    table.status === 'OCCUPIED' && 'animate-pulse-soft'
                   )}
                   onClick={() => navigate(`/order/${table.id}`)}
                 >
                   <CardContent className="p-4 text-center space-y-2">
                     <div className={cn('text-3xl lg:text-4xl')}>
-                      {table.status === 'available' ? '🪑' : table.status === 'occupied' ? '🍽️' : '💰'}
+                      {table.status === 'AVAILABLE' ? '🪑' : '🍽️'}
                     </div>
                     <h3 className="font-bold text-foreground text-base">{table.name}</h3>
                     <Badge variant="outline" className={cn('text-xs border-0', cfg.color, cfg.bgClass)}>

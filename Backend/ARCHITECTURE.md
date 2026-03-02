@@ -85,6 +85,25 @@ src/main/java/org/example/quannuoc/
 
 > URL: **kebab-case**, danh từ số nhiều, không dùng động từ.
 
+### @PathVariable — Luôn chỉ định tên tham số
+
+`@PathVariable` **bắt buộc** phải kèm tên tham số trong ngoặc:
+
+```java
+// ✅ Đúng
+@GetMapping("/{id}")
+public ResponseEntity<?> getById(@PathVariable("id") Long id) { ... }
+
+@DeleteMapping("/{id}")
+public ResponseEntity<?> delete(@PathVariable("id") Long id) { ... }
+
+// ❌ Sai — không chỉ định tên
+@GetMapping("/{id}")
+public ResponseEntity<?> getById(@PathVariable Long id) { ... }
+```
+
+> Lý do: Tránh lỗi khi compile mà không bật `-parameters`, đảm bảo mapping rõ ràng và an toàn.
+
 ### Database
 
 | Loại | Convention | Ví dụ |
@@ -152,6 +171,25 @@ Mỗi entity cần 3 file: `{Entity}Request.java`, `{Entity}Response.java`, `{En
 | `@Transactional` cho write operations | Quên transaction |
 | Throw exception rõ ràng | Return null rồi check ở controller |
 | Dùng `@RequiredArgsConstructor` | Dùng `@Autowired` trên field |
+
+### Xử lý null String cho PostgreSQL
+
+PostgreSQL **không tự chuyển `null` thành chuỗi rỗng**. Khi field kiểu `String` có thể `null`, **phải chuyển thành `""` trước khi truyền vào câu lệnh query/save**:
+
+```java
+// ✅ Đúng — normalize null thành "" trước khi lưu
+public MenuItem create(MenuItemRequest request) {
+    MenuItem item = new MenuItem();
+    item.setDescription(request.getDescription() != null ? request.getDescription() : "");
+    item.setNote(request.getNote() != null ? request.getNote() : "");
+    return menuItemRepository.save(item);
+}
+
+// ❌ Sai — để null đi thẳng vào PostgreSQL
+item.setDescription(request.getDescription()); // có thể null → lỗi hoặc kết quả sai khi query
+```
+
+> **Nguyên tắc:** Mọi field `String` không bắt buộc (`@NotBlank`) → set default `""` tại **Service layer** trước khi gọi Repository.
 
 ---
 

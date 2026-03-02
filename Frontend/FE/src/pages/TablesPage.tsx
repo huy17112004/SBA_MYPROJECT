@@ -9,21 +9,21 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, Armchair } from 'lucide-react';
+import { Plus, Pencil, Trash2, Armchair, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DiningTable, TableStatus } from '@/types';
 
 const statusConfig: Record<TableStatus, { label: string; emoji: string; colorClass: string }> = {
-  available: { label: 'Trống', emoji: '🟢', colorClass: 'bg-status-available/10 border-status-available/30 text-status-available' },
-  occupied: { label: 'Có khách', emoji: '🔴', colorClass: 'bg-status-occupied/10 border-status-occupied/30 text-status-occupied' },
-  waiting: { label: 'Chờ thanh toán', emoji: '🟡', colorClass: 'bg-status-waiting/10 border-status-waiting/30 text-status-waiting' },
+  AVAILABLE: { label: 'Trống', emoji: '🟢', colorClass: 'bg-status-available/10 border-status-available/30 text-status-available' },
+  OCCUPIED: { label: 'Có khách', emoji: '🔴', colorClass: 'bg-status-occupied/10 border-status-occupied/30 text-status-occupied' },
 };
 
 export default function TablesPage() {
-  const { tables, addTable, updateTable, deleteTable, getActiveOrderForTable } = useApp();
+  const { tables, addTable, updateTable, deleteTable, updateTableStatus, getActiveOrderForTable, loading } = useApp();
   const [dialog, setDialog] = useState(false);
   const [editing, setEditing] = useState<DiningTable | null>(null);
-  const [form, setForm] = useState({ name: '', seats: '4', status: 'available' as TableStatus });
+  const [form, setForm] = useState({ name: '', seats: '4', status: 'AVAILABLE' as TableStatus });
+  const [saving, setSaving] = useState(false);
 
   const openDialog = (table?: DiningTable) => {
     if (table) {
@@ -31,28 +31,51 @@ export default function TablesPage() {
       setForm({ name: table.name, seats: table.seats.toString(), status: table.status });
     } else {
       setEditing(null);
-      setForm({ name: `Bàn ${tables.length + 1}`, seats: '4', status: 'available' });
+      setForm({ name: `Bàn ${tables.length + 1}`, seats: '4', status: 'AVAILABLE' });
     }
     setDialog(true);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!form.name) { toast.error('Vui lòng nhập tên bàn'); return; }
-    if (editing) {
-      updateTable(editing.id, { name: form.name, seats: parseInt(form.seats), status: form.status });
-      toast.success('Đã cập nhật bàn');
-    } else {
-      addTable({ name: form.name, seats: parseInt(form.seats), status: form.status });
-      toast.success('Đã thêm bàn mới');
+    setSaving(true);
+    try {
+      if (editing) {
+        await updateTable(editing.id, { name: form.name, seats: parseInt(form.seats) });
+        // If status changed, update separately
+        if (form.status !== editing.status) {
+          await updateTableStatus(editing.id, form.status);
+        }
+        toast.success('Đã cập nhật bàn');
+      } else {
+        await addTable({ name: form.name, seats: parseInt(form.seats) });
+        toast.success('Đã thêm bàn mới');
+      }
+      setDialog(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Có lỗi xảy ra');
+    } finally {
+      setSaving(false);
     }
-    setDialog(false);
   };
 
-  const handleDelete = (table: DiningTable) => {
-    if (table.status !== 'available') { toast.error('Không thể xóa bàn đang có khách'); return; }
-    deleteTable(table.id);
-    toast.success('Đã xóa bàn');
+  const handleDelete = async (table: DiningTable) => {
+    if (table.status !== 'AVAILABLE') { toast.error('Không thể xóa bàn đang có khách'); return; }
+    try {
+      await deleteTable(table.id);
+      toast.success('Đã xóa bàn');
+    } catch (err: any) {
+      toast.error(err.message || 'Có lỗi xảy ra khi xóa bàn');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
@@ -60,7 +83,7 @@ export default function TablesPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Quản lý Bàn</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {tables.length} bàn · {tables.filter(t => t.status === 'available').length} trống
+            {tables.length} bàn · {tables.filter(t => t.status === 'AVAILABLE').length} trống
           </p>
         </div>
         <Button size="sm" onClick={() => openDialog()}>
@@ -100,7 +123,7 @@ export default function TablesPage() {
                   </div>
 
                   <div className="text-center py-2">
-                    <Armchair className={cn('w-10 h-10 mx-auto', table.status === 'available' ? 'text-status-available' : table.status === 'occupied' ? 'text-status-occupied' : 'text-status-waiting')} />
+                    <Armchair className={cn('w-10 h-10 mx-auto', table.status === 'AVAILABLE' ? 'text-status-available' : 'text-status-occupied')} />
                   </div>
 
                   <div className="flex items-center justify-between text-sm">
@@ -158,7 +181,10 @@ export default function TablesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialog(false)}>Hủy</Button>
-            <Button onClick={save}>{editing ? 'Cập nhật' : 'Thêm'}</Button>
+            <Button onClick={save} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+              {editing ? 'Cập nhật' : 'Thêm'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

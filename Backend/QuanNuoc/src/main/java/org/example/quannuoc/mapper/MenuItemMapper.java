@@ -27,7 +27,7 @@ public class MenuItemMapper {
                 .name(request.getName().trim())
                 .price(request.getPrice())
                 .category(category)
-                .description(request.getDescription())
+                .description(request.getDescription() != null ? request.getDescription() : "")
                 .available(request.getAvailable() != null ? request.getAvailable() : true)
                 .build();
     }

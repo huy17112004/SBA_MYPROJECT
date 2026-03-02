@@ -1,4 +1,4 @@
-import type { Category, MenuItem } from '@/types';
+import type { Category, MenuItem, DiningTable, TableStatus } from '@/types';
 
 const API_BASE = '/api';
 
@@ -119,4 +119,56 @@ export async function toggleMenuItemAvailability(
 
 export async function deleteMenuItem(id: number): Promise<void> {
   return apiRequest<void>(`/menu-items/${id}`, { method: 'DELETE' });
+}
+
+// --- DiningTable APIs ---
+
+export interface DiningTableParams {
+  status?: TableStatus;
+  keyword?: string;
+}
+
+export async function fetchDiningTables(
+  params?: DiningTableParams
+): Promise<DiningTable[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.status) searchParams.set('status', params.status);
+  if (params?.keyword) searchParams.set('keyword', params.keyword);
+
+  const qs = searchParams.toString();
+  return apiRequest<DiningTable[]>(`/dining-tables${qs ? `?${qs}` : ''}`);
+}
+
+export async function createDiningTable(data: {
+  name: string;
+  seats: number;
+}): Promise<DiningTable> {
+  return apiRequest<DiningTable>('/dining-tables', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateDiningTable(
+  id: number,
+  data: { name: string; seats: number }
+): Promise<DiningTable> {
+  return apiRequest<DiningTable>(`/dining-tables/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateDiningTableStatus(
+  id: number,
+  status: TableStatus
+): Promise<DiningTable> {
+  return apiRequest<DiningTable>(
+    `/dining-tables/${id}/status?status=${status}`,
+    { method: 'PATCH' }
+  );
+}
+
+export async function deleteDiningTable(id: number): Promise<void> {
+  return apiRequest<void>(`/dining-tables/${id}`, { method: 'DELETE' });
 }

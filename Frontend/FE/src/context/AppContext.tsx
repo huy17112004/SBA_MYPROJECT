@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { Category, MenuItem, DiningTable, Order, OrderItem, TableStatus, OrderStatus, PaymentMethod } from '@/types';
-import { defaultTables, defaultOrders } from '@/data/mockData';
+import { defaultOrders } from '@/data/mockData';
 import { generateId } from '@/lib/utils';
 import * as api from '@/services/api';
 
@@ -23,15 +23,15 @@ interface AppContextType {
   deleteMenuItem: (id: number) => Promise<void>;
   toggleMenuItemAvailability: (id: number) => Promise<void>;
 
-  // Table ops (still local)
-  addTable: (table: Omit<DiningTable, 'id'>) => void;
-  updateTable: (id: string, table: Partial<DiningTable>) => void;
-  deleteTable: (id: string) => void;
-  updateTableStatus: (id: string, status: TableStatus) => void;
+  // Table ops (API)
+  addTable: (table: { name: string; seats: number }) => Promise<void>;
+  updateTable: (id: number, table: { name: string; seats: number }) => Promise<void>;
+  deleteTable: (id: number) => Promise<void>;
+  updateTableStatus: (id: number, status: TableStatus) => Promise<void>;
 
   // Order ops (still local)
-  createOrder: (tableId: string) => Order;
-  getActiveOrderForTable: (tableId: string) => Order | undefined;
+  createOrder: (tableId: number) => Order;
+  getActiveOrderForTable: (tableId: number) => Order | undefined;
   addItemToOrder: (orderId: string, menuItem: MenuItem, note?: string) => void;
   removeItemFromOrder: (orderId: string, itemId: string) => void;
   updateOrderItemQuantity: (orderId: string, itemId: string, quantity: number) => void;
@@ -47,6 +47,7 @@ interface AppContextType {
   // Refresh helpers
   refreshCategories: () => Promise<void>;
   refreshMenuItems: () => Promise<void>;
+  refreshTables: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -54,7 +55,7 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [tables, setTables] = useState<DiningTable[]>(defaultTables);
+  const [tables, setTables] = useState<DiningTable[]>([]);
   const [orders, setOrders] = useState<Order[]>(defaultOrders);
   const [loading, setLoading] = useState(true);
 
@@ -69,11 +70,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setMenuItems(data);
   }, []);
 
+  const refreshTables = useCallback(async () => {
+    const data = await api.fetchDiningTables();
+    setTables(data);
+  }, []);
+
   useEffect(() => {
     async function init() {
       setLoading(true);
       try {
-        await Promise.all([refreshCategories(), refreshMenuItems()]);
+        await Promise.all([refreshCategories(), refreshMenuItems(), refreshTables()]);
       } catch (err) {
         console.error('Failed to fetch initial data:', err);
       } finally {
@@ -81,7 +87,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
     init();
-  }, [refreshCategories, refreshMenuItems]);
+  }, [refreshCategories, refreshMenuItems, refreshTables]);
 
   // --- Category CRUD (API) ---
   const addCategory = useCallback(async (cat: { name: string; displayOrder?: number }) => {
@@ -120,26 +126,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setMenuItems(prev => prev.map(m => m.id === id ? updated : m));
   }, []);
 
-  // --- Tables (still local state) ---
-  const addTable = useCallback((table: Omit<DiningTable, 'id'>) => {
-    setTables(prev => [...prev, { ...table, id: generateId() }]);
+  // --- Tables CRUD (API) ---
+  const addTable = useCallback(async (table: { name: string; seats: number }) => {
+    const created = await api.createDiningTable(table);
+    setTables(prev => [...prev, created]);
   }, []);
-  const updateTable = useCallback((id: string, table: Partial<DiningTable>) => {
-    setTables(prev => prev.map(t => t.id === id ? { ...t, ...table } : t));
+
+  const updateTable = useCallback(async (id: number, table: { name: string; seats: number }) => {
+    const updated = await api.updateDiningTable(id, table);
+    setTables(prev => prev.map(t => t.id === id ? updated : t));
   }, []);
-  const deleteTable = useCallback((id: string) => {
+
+  const deleteTable = useCallback(async (id: number) => {
+    await api.deleteDiningTable(id);
     setTables(prev => prev.filter(t => t.id !== id));
   }, []);
-  const updateTableStatus = useCallback((id: string, status: TableStatus) => {
-    setTables(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+
+  const updateTableStatus = useCallback(async (id: number, status: TableStatus) => {
+    const updated = await api.updateDiningTableStatus(id, status);
+    setTables(prev => prev.map(t => t.id === id ? updated : t));
   }, []);
 
   // --- Orders (still local state) ---
-  const createOrder = useCallback((tableId: string): Order => {
+  const createOrder = useCallback((tableId: number): Order => {
     const table = tables.find(t => t.id === tableId);
     const order: Order = {
       id: generateId(),
-      tableId,
+      tableId: String(tableId),
       tableName: table?.name || 'Unknown',
       items: [],
       status: 'active',
@@ -147,12 +160,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       total: 0,
     };
     setOrders(prev => [...prev, order]);
-    setTables(prev => prev.map(t => t.id === tableId ? { ...t, status: 'occupied' as TableStatus } : t));
+    // Also update table status to OCCUPIED via API
+    api.updateDiningTableStatus(tableId, 'OCCUPIED')
+      .then(updated => setTables(prev => prev.map(t => t.id === tableId ? updated : t)))
+      .catch(err => console.error('Failed to update table status:', err));
     return order;
   }, [tables]);
 
-  const getActiveOrderForTable = useCallback((tableId: string) => {
-    return orders.find(o => o.tableId === tableId && o.status === 'active');
+  const getActiveOrderForTable = useCallback((tableId: number) => {
+    return orders.find(o => o.tableId === String(tableId) && o.status === 'active');
   }, [orders]);
 
   const addItemToOrder = useCallback((orderId: string, menuItem: MenuItem, note?: string) => {
@@ -221,7 +237,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
     const order = orders.find(o => o.id === orderId);
     if (order) {
-      setTables(prev => prev.map(t => t.id === order.tableId ? { ...t, status: 'available' as TableStatus } : t));
+      const tableId = Number(order.tableId);
+      api.updateDiningTableStatus(tableId, 'AVAILABLE')
+        .then(updated => setTables(prev => prev.map(t => t.id === tableId ? updated : t)))
+        .catch(err => console.error('Failed to update table status:', err));
     }
   }, [orders]);
 
@@ -229,7 +248,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const order = orders.find(o => o.id === orderId);
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' as OrderStatus } : o));
     if (order) {
-      setTables(prev => prev.map(t => t.id === order.tableId ? { ...t, status: 'available' as TableStatus } : t));
+      const tableId = Number(order.tableId);
+      api.updateDiningTableStatus(tableId, 'AVAILABLE')
+        .then(updated => setTables(prev => prev.map(t => t.id === tableId ? updated : t)))
+        .catch(err => console.error('Failed to update table status:', err));
     }
   }, [orders]);
 
@@ -265,7 +287,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateOrderItemQuantity, updateOrderItemNote, markItemServed,
       completePayment, cancelOrder, getActiveOrders, getCompletedOrders,
       getTodayRevenue, getTodayOrderCount,
-      refreshCategories, refreshMenuItems,
+      refreshCategories, refreshMenuItems, refreshTables,
     }}>
       {children}
     </AppContext.Provider>

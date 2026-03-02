@@ -32,7 +32,7 @@ public class MenuItemController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<MenuItemResponse>> getById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<MenuItemResponse>> getById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(ApiResponse.success(menuItemService.getById(id)));
     }
 
@@ -46,7 +46,7 @@ public class MenuItemController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<MenuItemResponse>> update(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody MenuItemRequest request) {
         return ResponseEntity.ok(
                 ApiResponse.success("Cập nhật món thành công", menuItemService.update(id, request)));
@@ -54,14 +54,14 @@ public class MenuItemController {
 
     @PatchMapping("/{id}/toggle-availability")
     public ResponseEntity<ApiResponse<MenuItemResponse>> toggleAvailability(
-            @PathVariable Long id) {
+            @PathVariable("id") Long id) {
         return ResponseEntity.ok(
                 ApiResponse.success("Cập nhật trạng thái thành công",
                         menuItemService.toggleAvailability(id)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable("id") Long id) {
         menuItemService.delete(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa món thành công", null));
     }

@@ -22,7 +22,8 @@ public class MenuItemService {
     private final CategoryRepository categoryRepository;
 
     public List<MenuItemResponse> getAll(Long categoryId, Boolean available, String keyword) {
-        return menuItemRepository.findByFilters(categoryId, available, (keyword == null || keyword.isBlank()) ? "" : keyword)
+        return menuItemRepository
+                .findByFilters(categoryId, available, (keyword == null || keyword.isBlank()) ? "" : keyword)
                 .stream()
                 .map(MenuItemMapper::toResponse)
                 .toList();
@@ -48,7 +49,7 @@ public class MenuItemService {
         item.setName(request.getName().trim());
         item.setPrice(request.getPrice());
         item.setCategory(category);
-        item.setDescription(request.getDescription());
+        item.setDescription(request.getDescription() != null ? request.getDescription() : "");
         if (request.getAvailable() != null) {
             item.setAvailable(request.getAvailable());
         }

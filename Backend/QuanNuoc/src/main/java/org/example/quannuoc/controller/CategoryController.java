@@ -25,7 +25,7 @@ public class CategoryController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CategoryResponse>> getById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<CategoryResponse>> getById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(ApiResponse.success(categoryService.getById(id)));
     }
 
@@ -39,14 +39,14 @@ public class CategoryController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CategoryResponse>> update(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody CategoryRequest request) {
         return ResponseEntity.ok(
                 ApiResponse.success("Cập nhật loại món thành công", categoryService.update(id, request)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable("id") Long id) {
         categoryService.delete(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa loại món thành công", null));
     }

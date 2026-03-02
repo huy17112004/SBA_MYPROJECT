@@ -24,7 +24,5 @@ public class DiningTable {
     @Builder.Default
     private TableStatus status = TableStatus.AVAILABLE;
 
-    private String location;
-
     private Integer seats;
 }

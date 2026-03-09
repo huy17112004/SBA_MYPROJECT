@@ -3,6 +3,8 @@ package org.example.quannuoc.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "order_items")
 @Getter
@@ -32,4 +34,21 @@ public class OrderItem {
 
     @Column(nullable = false)
     private Long priceAtOrder;
+
+    // Thời điểm gọi món — dùng để sắp xếp queue phục vụ theo thứ tự thực tế
+    @Column(nullable = false)
+    private LocalDateTime orderedAt;
+
+    // Trạng thái từng dòng món (không phải toàn bộ order)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private OrderItemStatus status = OrderItemStatus.PENDING;
+
+    @PrePersist
+    protected void onCreate() {
+        if (orderedAt == null) {
+            orderedAt = LocalDateTime.now();
+        }
+    }
 }

@@ -24,13 +24,13 @@ public class Order {
     @JoinColumn(name = "dining_table_id", nullable = false)
     private DiningTable diningTable;
 
+    // Thời điểm bàn bắt đầu (có khách ngồi)
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Builder.Default
-    private OrderStatus status = OrderStatus.OPEN;
+    // null = chưa thanh toán | có giá trị = đã thanh toán (thay thế cho
+    // OrderStatus)
+    private LocalDateTime paidAt;
 
     @Column(nullable = false)
     @Builder.Default

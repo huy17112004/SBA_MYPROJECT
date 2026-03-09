@@ -89,7 +89,7 @@ src/main/java/org/example/quannuoc/
 
 `@PathVariable` **bắt buộc** phải kèm tên tham số trong ngoặc:
 
-```java
+```jav
 // ✅ Đúng
 @GetMapping("/{id}")
 public ResponseEntity<?> getById(@PathVariable("id") Long id) { ... }

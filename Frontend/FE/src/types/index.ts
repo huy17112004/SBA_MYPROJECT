@@ -1,39 +1,35 @@
 export interface Category {
-  id: number;
+  id: string;
   name: string;
-  displayOrder?: number;
+  description: string;
 }
 
 export interface MenuItem {
-  id: number;
+  id: string;
   name: string;
   price: number;
-  categoryId: number;
-  categoryName?: string;
-  description?: string;
+  categoryId: string;
+  description: string;
   available: boolean;
 }
 
-export type TableStatus = 'AVAILABLE' | 'OCCUPIED';
-
 export interface DiningTable {
-  id: number;
+  id: string;
   name: string;
+  status: 'empty' | 'occupied' | 'waiting_payment';
   seats: number;
-  status: TableStatus;
+  note: string;
 }
-
-export type OrderStatus = 'active' | 'completed' | 'cancelled';
-export type PaymentMethod = 'cash' | 'transfer';
 
 export interface OrderItem {
   id: string;
-  menuItemId: number;
+  menuItemId: string;
   menuItemName: string;
   quantity: number;
-  priceAtTime: number;
-  note?: string;
-  served: boolean;
+  note: string;
+  price: number;
+  status: 'pending' | 'served';
+  createdAt: Date;
 }
 
 export interface Order {
@@ -41,10 +37,11 @@ export interface Order {
   tableId: string;
   tableName: string;
   items: OrderItem[];
-  status: OrderStatus;
+  status: 'active' | 'paid' | 'cancelled';
   createdAt: Date;
-  completedAt?: Date;
-  total: number;
-  paymentMethod?: PaymentMethod;
-  note?: string;
+  paidAt: Date | null;
+  paymentMethod: 'cash' | 'transfer' | null;
+  totalAmount: number;
 }
+
+export type PaymentMethod = 'cash' | 'transfer';

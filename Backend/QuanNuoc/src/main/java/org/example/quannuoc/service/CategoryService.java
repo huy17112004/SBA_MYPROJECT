@@ -7,6 +7,7 @@ import org.example.quannuoc.entity.Category;
 import org.example.quannuoc.exception.ResourceNotFoundException;
 import org.example.quannuoc.mapper.CategoryMapper;
 import org.example.quannuoc.repository.CategoryRepository;
+import org.example.quannuoc.repository.MenuItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import java.util.List;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final MenuItemRepository menuItemRepository;
 
     public List<CategoryResponse> getAll() {
         return categoryRepository.findAllByOrderByDisplayOrderAsc()
@@ -49,6 +51,9 @@ public class CategoryService {
     @Transactional
     public void delete(Long id) {
         Category category = findByIdOrThrow(id);
+        if (menuItemRepository.existsByCategoryId(id)) {
+            throw new IllegalArgumentException("Không thể xoá danh mục này vì đang có món ăn thuộc danh mục này");
+        }
         categoryRepository.delete(category);
     }
 

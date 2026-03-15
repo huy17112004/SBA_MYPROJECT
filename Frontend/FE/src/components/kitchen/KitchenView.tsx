@@ -6,14 +6,14 @@ import { timeAgo } from '@/lib/format';
 import { Check } from 'lucide-react';
 
 export function KitchenView() {
-  const { state, dispatch } = useStore();
+  const { state, actions } = useStore();
 
-  const activeOrders = state.orders.filter(o => o.status === 'active');
+  const activeOrders = state.orders.filter(o => !o.paidAt);
   const pendingItems = activeOrders.flatMap(o =>
     o.items
-      .filter(i => i.status === 'pending')
+      .filter(i => i.status === 'pending' || i.status === 'PENDING')
       .map(i => ({ ...i, orderId: o.id, tableName: o.tableName }))
-  ).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  ).sort((a, b) => new Date(a.orderedAt).getTime() - new Date(b.orderedAt).getTime());
 
   // Summary: count of each item
   const summary: Record<string, { name: string; total: number }> = {};
@@ -51,11 +51,11 @@ export function KitchenView() {
                 <div>
                   <div className="font-medium">{item.menuItemName} × {item.quantity}</div>
                   <div className="text-xs text-muted-foreground">
-                    {item.tableName} · {timeAgo(item.createdAt)}
+                    {item.tableName} · {timeAgo(new Date(item.orderedAt))}
                   </div>
                   {item.note && <div className="text-xs italic text-muted-foreground">Ghi chú: {item.note}</div>}
                 </div>
-                <Button size="sm" onClick={() => dispatch({ type: 'MARK_ITEM_SERVED', payload: { orderId: item.orderId, itemId: item.id } })}>
+                <Button size="sm" onClick={() => actions.markItemServed(item.orderId, item.id)}>
                   <Check className="h-4 w-4 mr-1" /> Đã ra
                 </Button>
               </CardContent>

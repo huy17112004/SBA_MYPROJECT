@@ -12,8 +12,12 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
+    List<Order> findByPaidAtIsNull();
+
     // Tìm order đang mở (chưa thanh toán) của 1 bàn
     Optional<Order> findByDiningTableIdAndPaidAtIsNull(Long tableId);
+
+    boolean existsByDiningTableId(Long tableId);
 
     // Toàn bộ lịch sử order của 1 bàn
     @Query("SELECT o FROM Order o WHERE o.diningTable.id = :tableId ORDER BY o.createdAt DESC")

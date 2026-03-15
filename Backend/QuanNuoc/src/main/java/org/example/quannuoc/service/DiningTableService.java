@@ -8,6 +8,7 @@ import org.example.quannuoc.entity.TableStatus;
 import org.example.quannuoc.exception.ResourceNotFoundException;
 import org.example.quannuoc.mapper.DiningTableMapper;
 import org.example.quannuoc.repository.DiningTableRepository;
+import org.example.quannuoc.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ import java.util.List;
 public class DiningTableService {
 
     private final DiningTableRepository diningTableRepository;
+    private final OrderRepository orderRepository;
 
     public List<DiningTableResponse> getAll(TableStatus status, String keyword) {
         String normalizedKeyword = normalizeKeyword(keyword);
@@ -60,6 +62,12 @@ public class DiningTableService {
     @Transactional
     public void delete(Long id) {
         DiningTable table = findByIdOrThrow(id);
+        if (table.getStatus() != TableStatus.AVAILABLE) {
+            throw new IllegalArgumentException("Chỉ có thể xoá bàn đang ở trạng thái trống (chờ)");
+        }
+        if (orderRepository.existsByDiningTableId(id)) {
+            throw new IllegalArgumentException("Không thể xoá bàn này vì đã có lịch sử đơn hàng");
+        }
         diningTableRepository.delete(table);
     }
 

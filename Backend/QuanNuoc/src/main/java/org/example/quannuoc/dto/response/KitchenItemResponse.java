@@ -7,14 +7,14 @@ import java.time.LocalDateTime;
 
 @Getter
 @Builder
-public class OrderItemResponse {
-
+public class KitchenItemResponse {
     private Long id;
-    private Long menuItemId;
+    private Long orderId;
+    private Long tableId;
+    private String tableName;
     private String menuItemName;
     private Integer quantity;
     private String note;
-    private Long price;
     private LocalDateTime orderedAt;
     private String status;
 }

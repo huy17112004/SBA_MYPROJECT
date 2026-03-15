@@ -14,7 +14,7 @@ import { MenuItem } from '@/types';
 import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 
 export function MenuList() {
-  const { state, dispatch } = useStore();
+  const { state, actions } = useStore();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
@@ -22,11 +22,11 @@ export function MenuList() {
 
   const filtered = state.menuItems.filter(m => {
     if (search && !m.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (categoryFilter !== 'all' && m.categoryId !== categoryFilter) return false;
+    if (categoryFilter !== 'all' && String(m.categoryId) !== String(categoryFilter)) return false;
     return true;
   });
 
-  const getCategoryName = (id: string) => state.categories.find(c => c.id === id)?.name || '';
+  const getCategoryName = (id: string | number) => state.categories.find(c => c.id === id)?.name || '';
 
   return (
     <div>
@@ -46,7 +46,7 @@ export function MenuList() {
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tất cả</SelectItem>
-            {state.categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            {state.categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -70,12 +70,16 @@ export function MenuList() {
                 <div className="flex gap-1">
                   <Switch
                     checked={item.available}
-                    onCheckedChange={() => dispatch({ type: 'TOGGLE_MENU_ITEM_AVAILABLE', payload: item.id })}
+                    onCheckedChange={() => actions.toggleMenuItemAvailable(item.id)}
                   />
                   <Button variant="ghost" size="icon" onClick={() => { setEditItem(item); setShowForm(true); }}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => dispatch({ type: 'DELETE_MENU_ITEM', payload: item.id })}>
+                  <Button variant="ghost" size="icon" onClick={() => {
+                    if (confirm(`Bạn chắc chắn muốn xóa món ${item.name}?`)) {
+                      actions.deleteMenuItem(item.id);
+                    }
+                  }}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -91,19 +95,19 @@ export function MenuList() {
 }
 
 function MenuItemFormDialog({ item, onClose }: { item: MenuItem | null; onClose: () => void }) {
-  const { state, dispatch } = useStore();
+  const { state, actions } = useStore();
   const [name, setName] = useState(item?.name || '');
   const [price, setPrice] = useState(item?.price?.toString() || '');
-  const [categoryId, setCategoryId] = useState(item?.categoryId || state.categories[0]?.id || '');
+  const [categoryId, setCategoryId] = useState(item?.categoryId?.toString() || state.categories[0]?.id?.toString() || '');
   const [description, setDescription] = useState(item?.description || '');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim() || !price) return;
-    const data = { name, price: parseInt(price), categoryId, description, available: item?.available ?? true };
+    const data = { name, price: parseInt(price), categoryId: parseInt(categoryId), description, available: item?.available ?? true };
     if (item) {
-      dispatch({ type: 'UPDATE_MENU_ITEM', payload: { ...data, id: item.id } });
+      await actions.updateMenuItem(item.id, data);
     } else {
-      dispatch({ type: 'ADD_MENU_ITEM', payload: data });
+      await actions.addMenuItem(data);
     }
     onClose();
   };

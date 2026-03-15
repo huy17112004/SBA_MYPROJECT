@@ -4,15 +4,19 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { formatVND, timeAgo } from '@/lib/format';
 
-const statusColor: Record<DiningTable['status'], string> = {
+const statusColor: Record<string, string> = {
   empty: 'border-green-500 bg-green-500/10',
+  AVAILABLE: 'border-green-500 bg-green-500/10',
   occupied: 'border-red-500 bg-red-500/10',
+  OCCUPIED: 'border-red-500 bg-red-500/10',
   waiting_payment: 'border-yellow-500 bg-yellow-500/10',
 };
 
-const statusLabel: Record<DiningTable['status'], string> = {
+const statusLabel: Record<string, string> = {
   empty: 'Trống',
+  AVAILABLE: 'Trống',
   occupied: 'Có khách',
+  OCCUPIED: 'Có khách',
   waiting_payment: 'Chờ thanh toán',
 };
 
@@ -20,19 +24,22 @@ export function TableMap() {
   const { state } = useStore();
   const navigate = useNavigate();
 
-  const getActiveOrder = (tableId: string) =>
-    state.orders.find(o => o.tableId === tableId && o.status === 'active');
+  const getActiveOrder = (tableId: string | number) =>
+    state.orders.find(o => String(o.tableId) === String(tableId) && !o.paidAt);
 
   const handleTableClick = (table: DiningTable) => {
     const order = getActiveOrder(table.id);
-    if (table.status === 'empty') {
+    if (table.status === 'empty' || table.status === 'AVAILABLE') {
       navigate(`/order?tableId=${table.id}`);
     } else if (order) {
       navigate(`/order?orderId=${order.id}`);
+    } else {
+      // If occupied but no order found in state, try to navigate by tableId to create one
+      navigate(`/order?tableId=${table.id}`);
     }
   };
 
-  const isLongWait = (tableId: string) => {
+  const isLongWait = (tableId: string | number) => {
     const order = getActiveOrder(tableId);
     if (!order) return false;
     return (Date.now() - new Date(order.createdAt).getTime()) > 20 * 60 * 1000;

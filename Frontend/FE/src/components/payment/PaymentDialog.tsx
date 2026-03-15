@@ -13,11 +13,11 @@ interface Props {
 }
 
 export function PaymentDialog({ order, onClose }: Props) {
-  const { dispatch } = useStore();
+  const { actions } = useStore();
   const [method, setMethod] = useState<'cash' | 'transfer'>('cash');
 
-  const handlePay = () => {
-    dispatch({ type: 'PAY_ORDER', payload: { orderId: order.id, paymentMethod: method } });
+  const handlePay = async () => {
+    await actions.payOrder(order.id, method);
     toast.success(`Đã thanh toán ${formatVND(order.totalAmount)} - ${order.tableName}`);
     onClose();
   };

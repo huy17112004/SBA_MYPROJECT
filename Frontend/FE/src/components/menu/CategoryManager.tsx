@@ -9,7 +9,7 @@ import { Pencil, Trash2, Plus } from 'lucide-react';
 import { Category } from '@/types';
 
 export function CategoryManager() {
-  const { state, dispatch } = useStore();
+  const { state, actions } = useStore();
   const [editCat, setEditCat] = useState<Category | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -33,7 +33,11 @@ export function CategoryManager() {
                 <Button variant="ghost" size="icon" onClick={() => { setEditCat(c); setShowForm(true); }}>
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => dispatch({ type: 'DELETE_CATEGORY', payload: c.id })}>
+                <Button variant="ghost" size="icon" onClick={() => {
+                  if (confirm(`Bạn chắc chắn muốn xóa danh mục ${c.name}?`)) {
+                    actions.deleteCategory(c.id);
+                  }
+                }}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -47,16 +51,16 @@ export function CategoryManager() {
 }
 
 function CategoryFormDialog({ category, onClose }: { category: Category | null; onClose: () => void }) {
-  const { dispatch } = useStore();
+  const { actions } = useStore();
   const [name, setName] = useState(category?.name || '');
   const [description, setDescription] = useState(category?.description || '');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
     if (category) {
-      dispatch({ type: 'UPDATE_CATEGORY', payload: { ...category, name, description } });
+      await actions.updateCategory(category.id, { name, description });
     } else {
-      dispatch({ type: 'ADD_CATEGORY', payload: { name, description } });
+      await actions.addCategory({ name, description });
     }
     onClose();
   };

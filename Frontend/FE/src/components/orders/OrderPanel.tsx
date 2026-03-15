@@ -7,93 +7,59 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatVND } from '@/lib/format';
-import { Plus, Minus, Trash2, Search, Send, ArrowLeft, ArrowRightLeft } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, ArrowLeft, ArrowRightLeft } from 'lucide-react';
 import { PaymentDialog } from '@/components/payment/PaymentDialog';
+import { MenuItem } from '@/types';
+import { toast } from 'sonner';
 
 export function OrderPanel() {
-  const { state, dispatch } = useStore();
+  const { state, actions } = useStore();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [showPayment, setShowPayment] = useState(false);
   const [showMoveTable, setShowMoveTable] = useState(false);
-  const [notes, setNotes] = useState<Record<string, string>>({});
 
   const tableId = searchParams.get('tableId');
   const orderId = searchParams.get('orderId');
 
-  // Find or create order
-  let order = orderId ? state.orders.find(o => o.id === orderId) : null;
-  const table = tableId ? state.tables.find(t => t.id === tableId) : order ? state.tables.find(t => t.id === order!.tableId) : null;
+  // Find order
+  let currentOrder = orderId ? state.orders.find(o => String(o.id) === String(orderId)) : null;
+  const table = tableId ? state.tables.find(t => String(t.id) === String(tableId)) : (currentOrder ? state.tables.find(t => String(t.id) === String(currentOrder!.tableId)) : null);
 
-  // If coming from empty table, create order
-  if (tableId && !order && table) {
-    const existing = state.orders.find(o => o.tableId === tableId && o.status === 'active');
-    if (existing) {
-      order = existing;
-    }
-  }
-
-  const handleCreateAndAdd = () => {
-    if (tableId && table && !order) {
-      dispatch({ type: 'CREATE_ORDER', payload: { tableId, tableName: table.name } });
-    }
-  };
-
-  // After creating, find the new order
-  if (tableId && !order) {
-    order = state.orders.find(o => o.tableId === tableId && o.status === 'active');
-    if (!order && table) {
-      // Will create on first item add
-    }
+  if (!currentOrder && tableId) {
+    currentOrder = state.orders.find(o => String(o.tableId) === String(tableId) && !o.paidAt) || null;
   }
 
   const availableItems = state.menuItems.filter(m => {
     if (!m.available) return false;
     if (search && !m.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (catFilter !== 'all' && m.categoryId !== catFilter) return false;
+    if (catFilter !== 'all' && String(m.categoryId) !== String(catFilter)) return false;
     return true;
   });
 
-  const addItem = (menuItem: typeof state.menuItems[0]) => {
-    if (!order && tableId && table) {
-      dispatch({ type: 'CREATE_ORDER', payload: { tableId, tableName: table.name } });
-      // We'll add item after re-render via effect; for now just create
-      setTimeout(() => {
-        const newOrder = state.orders.find(o => o.tableId === tableId && o.status === 'active');
-        // This won't work due to stale closure; let's handle differently
-      }, 0);
-      return;
+  const addItem = async (menuItem: MenuItem) => {
+    let activeOrder = currentOrder;
+    if (!activeOrder && tableId) {
+      activeOrder = await actions.createOrder(tableId);
     }
-    if (!order) return;
-    // Check if item already in order with pending status
-    const existing = order.items.find(i => i.menuItemId === menuItem.id && i.status === 'pending');
+    
+    if (!activeOrder) return;
+
+    const existing = activeOrder.items.find(i => String(i.menuItemId) === String(menuItem.id) && (i.status === 'pending' || i.status === 'PENDING'));
     if (existing) {
-      dispatch({ type: 'UPDATE_ORDER_ITEM_QTY', payload: { orderId: order.id, itemId: existing.id, quantity: existing.quantity + 1 } });
+      await actions.updateOrderItem(activeOrder.id, existing.id, existing.quantity + 1, existing.note || '');
     } else {
-      dispatch({
-        type: 'ADD_ORDER_ITEMS',
-        payload: {
-          orderId: order.id,
-          items: [{ menuItemId: menuItem.id, menuItemName: menuItem.name, quantity: 1, note: '', price: menuItem.price, status: 'pending' }],
-        },
-      });
+      await actions.addOrderItems(activeOrder.id, [{ menuItemId: menuItem.id, quantity: 1, note: '' }]);
     }
   };
 
-  const emptyTables = state.tables.filter(t => t.status === 'empty');
-
-  const handleMoveTable = (newTableId: string) => {
-    if (!order) return;
-    const newTable = state.tables.find(t => t.id === newTableId);
-    if (!newTable) return;
-    dispatch({ type: 'MOVE_TABLE', payload: { orderId: order.id, newTableId, newTableName: newTable.name } });
+  const handleMoveTable = async (newTableId: string | number) => {
+    if (!currentOrder) return;
+    toast.error('Chưa hỗ trợ chuyển bàn');
     setShowMoveTable(false);
   };
-
-  // Need to re-get order after potential creation
-  const currentOrder = order || (tableId ? state.orders.find(o => o.tableId === tableId && o.status === 'active') : null);
 
   return (
     <div>
@@ -116,19 +82,17 @@ export function OrderPanel() {
           <CardContent className="p-3">
             <p className="text-sm mb-2 font-medium">Chọn bàn trống để chuyển:</p>
             <div className="flex flex-wrap gap-2">
-              {emptyTables.map(t => (
+              {state.tables.filter(t => t.status === 'empty').map(t => (
                 <Button key={t.id} variant="outline" size="sm" onClick={() => handleMoveTable(t.id)}>
                   {t.name}
                 </Button>
               ))}
-              {emptyTables.length === 0 && <p className="text-sm text-muted-foreground">Không có bàn trống</p>}
             </div>
           </CardContent>
         </Card>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Menu selector */}
         <div>
           <div className="flex gap-2 mb-3">
             <div className="relative flex-1">
@@ -139,7 +103,7 @@ export function OrderPanel() {
               <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả</SelectItem>
-                {state.categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                {state.categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -147,12 +111,7 @@ export function OrderPanel() {
             {availableItems.map(item => (
               <button
                 key={item.id}
-                onClick={() => {
-                  if (!currentOrder && tableId && table) {
-                    handleCreateAndAdd();
-                  }
-                  addItem(item);
-                }}
+                onClick={() => addItem(item)}
                 className="rounded-lg border p-3 text-left hover:bg-muted/50 transition-colors"
               >
                 <div className="text-sm font-medium truncate">{item.name}</div>
@@ -162,7 +121,6 @@ export function OrderPanel() {
           </div>
         </div>
 
-        {/* Order detail */}
         <div>
           <Card>
             <CardHeader className="pb-2">
@@ -178,25 +136,47 @@ export function OrderPanel() {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{item.menuItemName}</div>
                         <div className="text-xs text-muted-foreground">{formatVND(item.price)}</div>
-                        {item.note && <div className="text-xs italic text-muted-foreground">{item.note}</div>}
+                        <Input
+                          defaultValue={item.note || ''}
+                          placeholder="Ghi chú (ít đá...)"
+                          className="h-6 text-xs mt-1 px-2 w-full max-w-[150px] bg-muted/50"
+                          onBlur={(e) => {
+                            if (e.target.value !== item.note) {
+                              actions.updateOrderItem(currentOrder!.id, item.id, item.quantity, e.target.value);
+                            }
+                          }}
+                        />
                       </div>
-                      <Badge variant={item.status === 'served' ? 'default' : 'secondary'} className="text-xs">
-                        {item.status === 'served' ? 'Đã ra' : 'Chờ'}
+                      <Badge variant={(item.status === 'served' || item.status === 'SERVED') ? 'default' : 'secondary'} className="text-xs">
+                        {(item.status === 'served' || item.status === 'SERVED') ? 'Đã ra' : 'Chờ'}
                       </Badge>
                       <div className="flex items-center gap-1">
                         <Button variant="outline" size="icon" className="h-7 w-7"
-                          onClick={() => dispatch({ type: 'UPDATE_ORDER_ITEM_QTY', payload: { orderId: currentOrder.id, itemId: item.id, quantity: item.quantity - 1 } })}>
+                          onClick={() => {
+                            if (item.quantity > 1) {
+                              actions.updateOrderItem(currentOrder!.id, item.id, item.quantity - 1, item.note);
+                            } else {
+                              actions.removeOrderItem(currentOrder!.id, item.id);
+                            }
+                          }}>
                           <Minus className="h-3 w-3" />
                         </Button>
                         <span className="text-sm w-6 text-center">{item.quantity}</span>
                         <Button variant="outline" size="icon" className="h-7 w-7"
-                          onClick={() => dispatch({ type: 'UPDATE_ORDER_ITEM_QTY', payload: { orderId: currentOrder.id, itemId: item.id, quantity: item.quantity + 1 } })}>
+                          onClick={() => {
+                            if (item.status === 'served' || item.status === 'SERVED') {
+                              // Nếu món đã ra rồi mà nhấn +, tạo dòng mới gửi xuống bếp
+                              actions.addOrderItems(currentOrder!.id, [{ menuItemId: item.menuItemId, quantity: 1, note: item.note }]);
+                            } else {
+                              actions.updateOrderItem(currentOrder!.id, item.id, item.quantity + 1, item.note);
+                            }
+                          }}>
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
                       <span className="text-sm font-medium w-20 text-right">{formatVND(item.price * item.quantity)}</span>
                       <Button variant="ghost" size="icon" className="h-7 w-7"
-                        onClick={() => dispatch({ type: 'REMOVE_ORDER_ITEM', payload: { orderId: currentOrder.id, itemId: item.id } })}>
+                        onClick={() => actions.removeOrderItem(currentOrder!.id, item.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
@@ -210,7 +190,7 @@ export function OrderPanel() {
                       Thanh toán
                     </Button>
                     <Button variant="outline"
-                      onClick={() => dispatch({ type: 'CANCEL_ORDER', payload: currentOrder.id })}>
+                      onClick={() => toast.error('Chưa hỗ trợ hủy đơn')}>
                       Hủy đơn
                     </Button>
                   </div>

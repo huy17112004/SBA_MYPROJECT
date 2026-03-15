@@ -5,7 +5,9 @@ import org.example.quannuoc.dto.request.AddOrderItemsRequest;
 import org.example.quannuoc.dto.request.OrderItemRequest;
 import org.example.quannuoc.dto.request.OrderRequest;
 import org.example.quannuoc.dto.request.UpdateOrderItemRequest;
+import org.example.quannuoc.dto.request.PayOrderRequest;
 import org.example.quannuoc.dto.response.OrderResponse;
+import org.example.quannuoc.dto.response.KitchenItemResponse;
 import org.example.quannuoc.entity.*;
 import org.example.quannuoc.exception.ResourceNotFoundException;
 import org.example.quannuoc.mapper.OrderMapper;
@@ -27,6 +29,13 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final DiningTableRepository diningTableRepository;
     private final MenuItemRepository menuItemRepository;
+
+    // Lấy tất cả order đang mở
+    public List<OrderResponse> getAllActive() {
+        return orderRepository.findByPaidAtIsNull().stream()
+                .map(OrderMapper::toResponse)
+                .toList();
+    }
 
     // Lấy order đang mở (chưa thanh toán) của bàn
     public OrderResponse getActiveOrderByTableId(Long tableId) {
@@ -60,23 +69,26 @@ public class OrderService {
                 .totalAmount(0L)
                 .build();
 
+        // Lưu order trước để có ID
+        Order savedOrder = orderRepository.save(order);
+
         // Thêm các món ban đầu (nếu có)
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             for (OrderItemRequest itemReq : request.getItems()) {
                 MenuItem menuItem = findMenuItemOrThrow(itemReq.getMenuItemId());
-                OrderItem orderItem = buildOrderItem(order, menuItem, itemReq);
-                order.getItems().add(orderItem);
+                OrderItem orderItem = buildOrderItem(savedOrder, menuItem, itemReq);
+                orderItemRepository.save(orderItem);
+                savedOrder.getItems().add(orderItem);
             }
-            order.setTotalAmount(calculateTotalAmount(order.getItems()));
+            savedOrder.setTotalAmount(calculateTotalAmount(savedOrder.getItems()));
+            savedOrder = orderRepository.save(savedOrder);
         }
-
-        Order saved = orderRepository.save(order);
 
         // Cập nhật trạng thái bàn → OCCUPIED
         table.setStatus(TableStatus.OCCUPIED);
         diningTableRepository.save(table);
 
-        return OrderMapper.toResponse(saved);
+        return OrderMapper.toResponse(savedOrder);
     }
 
     // Thêm món vào order đang mở
@@ -87,6 +99,8 @@ public class OrderService {
         for (OrderItemRequest itemReq : request.getItems()) {
             MenuItem menuItem = findMenuItemOrThrow(itemReq.getMenuItemId());
             OrderItem orderItem = buildOrderItem(order, menuItem, itemReq);
+            // Lưu orderItem trước để tránh lỗi TransientObjectException
+            orderItemRepository.save(orderItem);
             order.getItems().add(orderItem);
         }
 
@@ -115,6 +129,47 @@ public class OrderService {
 
         order.getItems().remove(item);
         order.setTotalAmount(calculateTotalAmount(order.getItems()));
+        return OrderMapper.toResponse(orderRepository.save(order));
+    }
+
+    // Thanh toán order
+    @Transactional
+    public OrderResponse payOrder(Long id, PayOrderRequest request) {
+        Order order = findOpenOrderOrThrow(id);
+        order.setPaidAt(LocalDateTime.now());
+        order.setPaymentMethod(request.getPaymentMethod());
+        Order saved = orderRepository.save(order);
+        
+        DiningTable table = order.getDiningTable();
+        table.setStatus(TableStatus.AVAILABLE);
+        diningTableRepository.save(table);
+        
+        return OrderMapper.toResponse(saved);
+    }
+
+    // Quản lý bếp: Lấy danh sách món đang chờ
+    public List<KitchenItemResponse> getPendingKitchenItems() {
+        return orderItemRepository.findPendingItems(OrderItemStatus.PENDING).stream()
+            .map(item -> KitchenItemResponse.builder()
+                .id(item.getId())
+                .orderId(item.getOrder().getId())
+                .tableId(item.getOrder().getDiningTable().getId())
+                .tableName(item.getOrder().getDiningTable().getName())
+                .menuItemName(item.getMenuItem().getName())
+                .quantity(item.getQuantity())
+                .note(item.getNote())
+                .orderedAt(item.getOrderedAt())
+                .status(item.getStatus().name())
+                .build())
+            .toList();
+    }
+
+    // Đánh dấu món đã phục vụ
+    @Transactional
+    public OrderResponse markItemServed(Long orderId, Long itemId) {
+        Order order = findOpenOrderOrThrow(orderId);
+        OrderItem item = findItemInOrder(order, itemId);
+        item.setStatus(OrderItemStatus.SERVED);
         return OrderMapper.toResponse(orderRepository.save(order));
     }
 

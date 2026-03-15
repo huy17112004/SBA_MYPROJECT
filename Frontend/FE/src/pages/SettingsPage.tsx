@@ -12,7 +12,7 @@ import { Pencil, Trash2, Plus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function SettingsPage() {
-  const { state, dispatch } = useStore();
+  const { state, actions, dispatch } = useStore();
   const [editTable, setEditTable] = useState<DiningTable | null>(null);
   const [showTableForm, setShowTableForm] = useState(false);
 
@@ -57,8 +57,12 @@ export default function SettingsPage() {
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon"
-                      disabled={t.status !== 'empty'}
-                      onClick={() => dispatch({ type: 'DELETE_TABLE', payload: t.id })}>
+                      disabled={t.status !== 'empty' && t.status !== 'AVAILABLE'}
+                      onClick={() => {
+                        if (confirm(`Bạn chắc chắn muốn xóa ${t.name}?`)) {
+                          actions.deleteTable(t.id);
+                        }
+                      }}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

@@ -15,7 +15,7 @@ public class OrderItemMapper {
                 .menuItemName(item.getMenuItem().getName())
                 .quantity(item.getQuantity())
                 .note(item.getNote())
-                .priceAtOrder(item.getPriceAtOrder())
+                .price(item.getPriceAtOrder())
                 .orderedAt(item.getOrderedAt())
                 .status(item.getStatus().name())
                 .build();

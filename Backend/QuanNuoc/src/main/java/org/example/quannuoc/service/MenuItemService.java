@@ -9,6 +9,7 @@ import org.example.quannuoc.exception.ResourceNotFoundException;
 import org.example.quannuoc.mapper.MenuItemMapper;
 import org.example.quannuoc.repository.CategoryRepository;
 import org.example.quannuoc.repository.MenuItemRepository;
+import org.example.quannuoc.repository.OrderItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ public class MenuItemService {
 
     private final MenuItemRepository menuItemRepository;
     private final CategoryRepository categoryRepository;
+    private final OrderItemRepository orderItemRepository;
 
     public List<MenuItemResponse> getAll(Long categoryId, Boolean available, String keyword) {
         return menuItemRepository
@@ -66,6 +68,9 @@ public class MenuItemService {
     @Transactional
     public void delete(Long id) {
         MenuItem item = findByIdOrThrow(id);
+        if (orderItemRepository.existsByMenuItemId(id)) {
+            throw new IllegalArgumentException("Không thể xoá món ăn này vì đã có trong hoá đơn/order của khách");
+        }
         menuItemRepository.delete(item);
     }
 

@@ -13,16 +13,16 @@ interface Props {
 }
 
 export function TableForm({ table, open, onClose }: Props) {
-  const { dispatch } = useStore();
+  const { actions } = useStore();
   const [name, setName] = useState(table?.name || '');
   const [seats, setSeats] = useState(table?.seats?.toString() || '4');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
     if (table) {
-      dispatch({ type: 'UPDATE_TABLE', payload: { ...table, name, seats: parseInt(seats) || 4 } });
+      await actions.updateTable(table.id, { name, seats: parseInt(seats) || 4 });
     } else {
-      dispatch({ type: 'ADD_TABLE', payload: { name, seats: parseInt(seats) || 4, status: 'empty', note: '' } });
+      await actions.addTable({ name, seats: parseInt(seats) || 4, status: 'empty', note: '' });
     }
     onClose();
   };

@@ -5,12 +5,16 @@ import lombok.RequiredArgsConstructor;
 import org.example.quannuoc.dto.request.AddOrderItemsRequest;
 import org.example.quannuoc.dto.request.OrderRequest;
 import org.example.quannuoc.dto.request.UpdateOrderItemRequest;
+import org.example.quannuoc.dto.request.PayOrderRequest;
 import org.example.quannuoc.dto.response.ApiResponse;
 import org.example.quannuoc.dto.response.OrderResponse;
+import org.example.quannuoc.dto.response.KitchenItemResponse;
 import org.example.quannuoc.service.OrderService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -18,6 +22,12 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
 
     private final OrderService orderService;
+
+    // Lấy tất cả order đang mở
+    @GetMapping("/active")
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> getAllActive() {
+        return ResponseEntity.ok(ApiResponse.success(orderService.getAllActive()));
+    }
 
     // Lấy order đang mở của một bàn
     @GetMapping("/table/{tableId}")
@@ -69,5 +79,29 @@ public class OrderController {
         return ResponseEntity.ok(
                 ApiResponse.success("Xóa món thành công",
                         orderService.removeOrderItem(orderId, itemId)));
+    }
+
+    // Thanh toán order
+    @PatchMapping("/{id}/pay")
+    public ResponseEntity<ApiResponse<OrderResponse>> payOrder(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody PayOrderRequest request) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Thanh toán thành công", orderService.payOrder(id, request)));
+    }
+
+    // Quản lý bếp: Lấy danh sách món đang chờ
+    @GetMapping("/kitchen/pending")
+    public ResponseEntity<ApiResponse<List<KitchenItemResponse>>> getPendingKitchenItems() {
+        return ResponseEntity.ok(ApiResponse.success(orderService.getPendingKitchenItems()));
+    }
+
+    // Đánh dấu món đã phục vụ
+    @PatchMapping("/{orderId}/items/{itemId}/serve")
+    public ResponseEntity<ApiResponse<OrderResponse>> markItemServed(
+            @PathVariable("orderId") Long orderId,
+            @PathVariable("itemId") Long itemId) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Đã phục vụ món", orderService.markItemServed(orderId, itemId)));
     }
 }

@@ -48,6 +48,7 @@ public class DiningTableService {
 
         table.setName(request.getName().trim());
         table.setSeats(request.getSeats());
+        table.setNote(request.getNote() != null ? request.getNote() : "");
 
         return DiningTableMapper.toResponse(diningTableRepository.save(table));
     }

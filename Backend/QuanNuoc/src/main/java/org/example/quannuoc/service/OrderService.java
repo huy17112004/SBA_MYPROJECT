@@ -1,11 +1,7 @@
 package org.example.quannuoc.service;
 
 import lombok.RequiredArgsConstructor;
-import org.example.quannuoc.dto.request.AddOrderItemsRequest;
-import org.example.quannuoc.dto.request.OrderItemRequest;
-import org.example.quannuoc.dto.request.OrderRequest;
-import org.example.quannuoc.dto.request.UpdateOrderItemRequest;
-import org.example.quannuoc.dto.request.PayOrderRequest;
+import org.example.quannuoc.dto.request.*;
 import org.example.quannuoc.dto.response.OrderResponse;
 import org.example.quannuoc.dto.response.KitchenItemResponse;
 import org.example.quannuoc.entity.*;
@@ -15,10 +11,13 @@ import org.example.quannuoc.repository.DiningTableRepository;
 import org.example.quannuoc.repository.MenuItemRepository;
 import org.example.quannuoc.repository.OrderItemRepository;
 import org.example.quannuoc.repository.OrderRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -35,6 +34,12 @@ public class OrderService {
         return orderRepository.findByPaidAtIsNull().stream()
                 .map(OrderMapper::toResponse)
                 .toList();
+    }
+
+    // Lấy lịch sử order có phân trang
+    public Page<OrderResponse> getHistory(Pageable pageable) {
+        return orderRepository.findByPaidAtIsNotNullOrderByPaidAtDesc(pageable)
+                .map(OrderMapper::toResponse);
     }
 
     // Lấy order đang mở (chưa thanh toán) của bàn
@@ -147,10 +152,112 @@ public class OrderService {
         return OrderMapper.toResponse(saved);
     }
 
-    // Quản lý bếp: Lấy danh sách món đang chờ
-    public List<KitchenItemResponse> getPendingKitchenItems() {
-        return orderItemRepository.findPendingItems(OrderItemStatus.PENDING).stream()
-            .map(item -> KitchenItemResponse.builder()
+    // Chuyển bàn
+    @Transactional
+    public OrderResponse moveOrder(MoveTableRequest request) {
+        Order sourceOrder = orderRepository.findByDiningTableIdAndPaidAtIsNull(request.getSourceTableId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order đang mở cho bàn nguồn", request.getSourceTableId()));
+        
+        DiningTable targetTable = findTableOrThrow(request.getTargetTableId());
+        
+        if (orderRepository.findByDiningTableIdAndPaidAtIsNull(request.getTargetTableId()).isPresent()) {
+            throw new IllegalStateException("Bàn đích đang có order, vui lòng dùng chức năng Gộp bàn.");
+        }
+
+        DiningTable sourceTable = sourceOrder.getDiningTable();
+        
+        // Cập nhật order
+        sourceOrder.setDiningTable(targetTable);
+        Order saved = orderRepository.save(sourceOrder);
+
+        // Cập nhật trạng thái bàn
+        sourceTable.setStatus(TableStatus.AVAILABLE);
+        targetTable.setStatus(TableStatus.OCCUPIED);
+        diningTableRepository.save(sourceTable);
+        diningTableRepository.save(targetTable);
+
+        return OrderMapper.toResponse(saved);
+    }
+
+    // Gộp bàn
+    @Transactional
+    public OrderResponse mergeOrders(MergeTableRequest request) {
+        Order sourceOrder = orderRepository.findByDiningTableIdAndPaidAtIsNull(request.getSourceTableId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order đang mở cho bàn nguồn", request.getSourceTableId()));
+        
+        Order targetOrder = orderRepository.findByDiningTableIdAndPaidAtIsNull(request.getTargetTableId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order đang mở cho bàn đích", request.getTargetTableId()));
+
+        // Di chuyển tất cả các món từ source sang target
+        List<OrderItem> items = new ArrayList<>(sourceOrder.getItems());
+        for (OrderItem item : items) {
+            item.setOrder(targetOrder);
+            orderItemRepository.save(item);
+        }
+        
+        targetOrder.getItems().addAll(items);
+        targetOrder.setTotalAmount(calculateTotalAmount(targetOrder.getItems()));
+        Order saved = orderRepository.save(targetOrder);
+
+        // Xóa order nguồn cũ (đã hết món)
+        DiningTable sourceTable = sourceOrder.getDiningTable();
+        sourceOrder.setItems(new ArrayList<>()); // Tránh xóa lan truyền nếu có CascadeType.ALL
+        orderRepository.delete(sourceOrder);
+
+        // Cập nhật trạng thái bàn nguồn
+        sourceTable.setStatus(TableStatus.AVAILABLE);
+        diningTableRepository.save(sourceTable);
+
+        return OrderMapper.toResponse(saved);
+    }
+
+    // Tách hóa đơn (Tách món sang bàn khác)
+    @Transactional
+    public OrderResponse splitOrder(Long sourceOrderId, SplitOrderRequest request) {
+        Order sourceOrder = findOpenOrderOrThrow(sourceOrderId);
+        DiningTable targetTable = findTableOrThrow(request.getTargetTableId());
+
+        // Tìm hoặc tạo order cho bàn đích
+        Order targetOrder = orderRepository.findByDiningTableIdAndPaidAtIsNull(request.getTargetTableId())
+                .orElseGet(() -> {
+                    Order newOrder = Order.builder()
+                            .diningTable(targetTable)
+                            .createdAt(LocalDateTime.now())
+                            .note("Tách từ " + sourceOrder.getDiningTable().getName())
+                            .totalAmount(0L)
+                            .build();
+                    targetTable.setStatus(TableStatus.OCCUPIED);
+                    diningTableRepository.save(targetTable);
+                    return orderRepository.save(newOrder);
+                });
+
+        // Di chuyển các item được chỉ định
+        List<OrderItem> itemsToMove = new ArrayList<>(sourceOrder.getItems().stream()
+                .filter(i -> request.getOrderItemIds().contains(i.getId()))
+                .toList());
+
+        if (itemsToMove.isEmpty()) {
+            throw new IllegalArgumentException("Không tìm thấy món cần tách trong order nguồn");
+        }
+
+        for (OrderItem item : itemsToMove) {
+            item.setOrder(targetOrder);
+            orderItemRepository.save(item);
+            sourceOrder.getItems().remove(item);
+            targetOrder.getItems().add(item);
+        }
+
+        // Cập nhật lại tổng tiền cả 2 order
+        sourceOrder.setTotalAmount(calculateTotalAmount(sourceOrder.getItems()));
+        targetOrder.setTotalAmount(calculateTotalAmount(targetOrder.getItems()));
+
+        orderRepository.save(sourceOrder);
+        return OrderMapper.toResponse(orderRepository.save(targetOrder));
+    }
+
+    // Quản lý bếp: Lấy danh sách món đang chờ có phân trang
+    public Page<KitchenItemResponse> getPendingKitchenItems(Pageable pageable) {
+        return orderItemRepository.findPendingItemsPage(OrderItemStatus.PENDING, pageable).map(item -> KitchenItemResponse.builder()
                 .id(item.getId())
                 .orderId(item.getOrder().getId())
                 .tableId(item.getOrder().getDiningTable().getId())
@@ -160,8 +267,7 @@ public class OrderService {
                 .note(item.getNote())
                 .orderedAt(item.getOrderedAt())
                 .status(item.getStatus().name())
-                .build())
-            .toList();
+                .build());
     }
 
     // Đánh dấu món đã phục vụ

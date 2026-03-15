@@ -16,4 +16,7 @@ public class DiningTableRequest {
 
     @Min(value = 1, message = "Số ghế phải >= 1")
     private Integer seats;
+
+    @Size(max = 200, message = "Ghi chú không quá 200 ký tự")
+    private String note;
 }

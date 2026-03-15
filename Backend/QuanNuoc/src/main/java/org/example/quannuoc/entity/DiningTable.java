@@ -25,4 +25,7 @@ public class DiningTable {
     private TableStatus status = TableStatus.AVAILABLE;
 
     private Integer seats;
+
+    @Column(length = 200)
+    private String note;
 }

@@ -88,26 +88,25 @@ interface StoreContextType {
   dispatch: React.Dispatch<Action>;
   refreshData: () => Promise<void>;
   actions: {
-    // Categories
     addCategory: (data: Omit<Category, 'id'>) => Promise<void>;
     updateCategory: (id: string | number, data: Omit<Category, 'id'>) => Promise<void>;
     deleteCategory: (id: string | number) => Promise<void>;
-    // Menu Items
     addMenuItem: (data: any) => Promise<void>;
     updateMenuItem: (id: string | number, data: any) => Promise<void>;
     deleteMenuItem: (id: string | number) => Promise<void>;
     toggleMenuItemAvailable: (id: string | number) => Promise<void>;
-    // Tables
     addTable: (data: any) => Promise<void>;
     updateTable: (id: string | number, data: any) => Promise<void>;
     deleteTable: (id: string | number) => Promise<void>;
-    // Orders
     createOrder: (tableId: string | number) => Promise<Order>;
     addOrderItems: (orderId: string | number, items: { menuItemId: string | number; quantity: number; note: string }[]) => Promise<void>;
     updateOrderItem: (orderId: string | number, itemId: string | number, quantity: number, note: string) => Promise<void>;
     removeOrderItem: (orderId: string | number, itemId: string | number) => Promise<void>;
     markItemServed: (orderId: string | number, itemId: string | number) => Promise<void>;
     payOrder: (orderId: string | number, paymentMethod: string) => Promise<void>;
+    moveOrder: (sourceTableId: string | number, targetTableId: string | number) => Promise<void>;
+    mergeOrders: (sourceTableId: string | number, targetTableId: string | number) => Promise<void>;
+    splitOrder: (sourceOrderId: string | number, targetTableId: string | number, orderItemIds: (string | number)[]) => Promise<void>;
   };
 }
 
@@ -139,6 +138,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshData();
+    const interval = setInterval(refreshData, 10000);
+    return () => clearInterval(interval);
   }, [refreshData]);
 
   useEffect(() => {
@@ -239,8 +240,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       try {
         const res = await api.post<Order>('/orders', { tableId });
         dispatch({ type: 'UPDATE_ORDER', payload: res });
-        const updatedTable = await api.get<DiningTable>(`/dining-tables/${tableId}`);
-        dispatch({ type: 'UPDATE_TABLE', payload: updatedTable });
+        const tables = await api.get<DiningTable[]>('/dining-tables');
+        dispatch({ type: 'SET_TABLES', payload: tables });
         toast.success('Đã tạo order');
         return res;
       } catch (error: any) {
@@ -292,6 +293,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         toast.success('Đã thanh toán');
       } catch (error: any) {
         toast.error(error.message || 'Không thể thanh toán');
+      }
+    },
+    moveOrder: async (sourceTableId: string | number, targetTableId: string | number) => {
+      try {
+        await api.post('/orders/move', { sourceTableId, targetTableId });
+        refreshData();
+        toast.success('Đã chuyển bàn');
+      } catch (error: any) {
+        toast.error(error.message || 'Không thể chuyển bàn');
+      }
+    },
+    mergeOrders: async (sourceTableId: string | number, targetTableId: string | number) => {
+      try {
+        await api.post('/orders/merge', { sourceTableId, targetTableId });
+        refreshData();
+        toast.success('Đã gộp bàn');
+      } catch (error: any) {
+        toast.error(error.message || 'Không thể gộp bàn');
+      }
+    },
+    splitOrder: async (sourceOrderId: string | number, targetTableId: string | number, orderItemIds: (string | number)[]) => {
+      try {
+        await api.post(`/orders/${sourceOrderId}/split`, { targetTableId, orderItemIds });
+        refreshData();
+        toast.success('Đã tách món');
+      } catch (error: any) {
+        toast.error(error.message || 'Không thể tách món');
       }
     }
   };

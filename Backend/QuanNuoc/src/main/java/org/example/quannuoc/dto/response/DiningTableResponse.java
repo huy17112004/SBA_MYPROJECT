@@ -11,4 +11,5 @@ public class DiningTableResponse {
     private String name;
     private String status;
     private Integer seats;
+    private String note;
 }

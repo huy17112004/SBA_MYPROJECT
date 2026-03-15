@@ -16,6 +16,7 @@ public class DiningTableMapper {
                 .name(table.getName())
                 .status(table.getStatus().name())
                 .seats(table.getSeats())
+                .note(table.getNote())
                 .build();
     }
 
@@ -24,6 +25,7 @@ public class DiningTableMapper {
                 .name(request.getName().trim())
                 .status(TableStatus.AVAILABLE)
                 .seats(request.getSeats())
+                .note(request.getNote() != null ? request.getNote() : "")
                 .build();
     }
 }

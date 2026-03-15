@@ -2,14 +2,14 @@ package org.example.quannuoc.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.example.quannuoc.dto.request.AddOrderItemsRequest;
-import org.example.quannuoc.dto.request.OrderRequest;
-import org.example.quannuoc.dto.request.UpdateOrderItemRequest;
-import org.example.quannuoc.dto.request.PayOrderRequest;
+import org.example.quannuoc.dto.request.*;
 import org.example.quannuoc.dto.response.ApiResponse;
 import org.example.quannuoc.dto.response.OrderResponse;
 import org.example.quannuoc.dto.response.KitchenItemResponse;
 import org.example.quannuoc.service.OrderService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +27,15 @@ public class OrderController {
     @GetMapping("/active")
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getAllActive() {
         return ResponseEntity.ok(ApiResponse.success(orderService.getAllActive()));
+    }
+
+    // Lấy lịch sử order có phân trang
+    @GetMapping("/history")
+    public ResponseEntity<ApiResponse<Page<OrderResponse>>> getHistory(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(ApiResponse.success(orderService.getHistory(pageable)));
     }
 
     // Lấy order đang mở của một bàn
@@ -90,10 +99,38 @@ public class OrderController {
                 ApiResponse.success("Thanh toán thành công", orderService.payOrder(id, request)));
     }
 
-    // Quản lý bếp: Lấy danh sách món đang chờ
+    // Chuyển bàn
+    @PostMapping("/move")
+    public ResponseEntity<ApiResponse<OrderResponse>> moveOrder(
+            @Valid @RequestBody MoveTableRequest request) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Chuyển bàn thành công", orderService.moveOrder(request)));
+    }
+
+    // Gộp bàn
+    @PostMapping("/merge")
+    public ResponseEntity<ApiResponse<OrderResponse>> mergeOrders(
+            @Valid @RequestBody MergeTableRequest request) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Gộp bàn thành công", orderService.mergeOrders(request)));
+    }
+
+    // Tách hóa đơn (món)
+    @PostMapping("/{id}/split")
+    public ResponseEntity<ApiResponse<OrderResponse>> splitOrder(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody SplitOrderRequest request) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Tách món thành công", orderService.splitOrder(id, request)));
+    }
+
+    // Quản lý bếp: Lấy danh sách món đang chờ có phân trang
     @GetMapping("/kitchen/pending")
-    public ResponseEntity<ApiResponse<List<KitchenItemResponse>>> getPendingKitchenItems() {
-        return ResponseEntity.ok(ApiResponse.success(orderService.getPendingKitchenItems()));
+    public ResponseEntity<ApiResponse<Page<KitchenItemResponse>>> getPendingKitchenItems(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(ApiResponse.success(orderService.getPendingKitchenItems(pageable)));
     }
 
     // Đánh dấu món đã phục vụ

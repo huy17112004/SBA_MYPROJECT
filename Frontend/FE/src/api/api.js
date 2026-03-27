@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api'
+  // baseURL: 'http://localhost:8080/api'
+  baseURL: 'https://sba-myproject.onrender.com/api'
 });
 
 // Add a response interceptor to handle the ApiResponse wrapper
